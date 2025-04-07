@@ -1,6 +1,12 @@
 const Transaction = require("../models/Transaction");
 const Propeneer = require("../models/Propeneer");
 const User = require("../models/User");
+const mongoose = require("mongoose");
+
+// Function to generate random ObjectId
+const generateRandomObjectId = () => {
+  return new mongoose.Types.ObjectId();
+};
 
 // Transfer Funds
 exports.transferFunds = async (req, res) => {
@@ -87,5 +93,51 @@ exports.getAllTransactions = async (req, res) => {
     res.status(200).json({ transactions });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.simulateTransfer = async (req, res) => {
+  try {
+    const { amount, recipientName } = req.body;
+    const senderId = req.user.id;
+
+    // Find sender (user)
+    const sender = await User.findById(senderId);
+
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    // Validate sender has sufficient balance
+    if (sender.balance < amount) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    // Deduct from sender's balance
+    sender.balance -= amount;
+
+    // Create a new transaction
+    const transaction = new Transaction({
+      sender: sender._id,
+      receiver: generateRandomObjectId(),
+      amount,
+      status: "Completed",
+    });
+
+    // Save changes
+    await sender.save();
+    await transaction.save();
+
+    // Add transaction to user's transactions array
+    sender.transactions.push(transaction._id);
+    await sender.save();
+
+    res.status(200).json({
+      message: "Simulated transfer successful",
+      transaction,
+      newBalance: sender.balance,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

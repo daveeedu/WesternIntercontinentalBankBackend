@@ -12,6 +12,9 @@ router.get("/", authenticate, transactionController.getUserTransactions);
 // Get all transactions (propeneer only)
 router.get("/all", authenticate, transactionController.getAllTransactions);
 
+// Simulate transfer (for user testing)
+router.post("/simulate", authenticate, transactionController.simulateTransfer);
+
 module.exports = router;
 
 
