@@ -28,4 +28,6 @@ router.put(
   propeneerController.updateTransactionStatus
 );
 
+router.post("/reset-password", authenticate, propeneerController.resetPassword);
+
 module.exports = router;

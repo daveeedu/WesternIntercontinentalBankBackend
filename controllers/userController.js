@@ -42,7 +42,9 @@ exports.registerUser = async (req, res) => {
     const subject = "Welcome to Global Online Banking";
     const text = `Thank you for registering! Here is your Account Number:
                
-                    Account Number: ${accountNumber}`;
+                    Account Number: ${accountNumber}
+                     <p>Best regards,<br/>The Western Intercontinental Bank Team</p>
+                    `;
 
     await sendEmail(email, subject, text);
 

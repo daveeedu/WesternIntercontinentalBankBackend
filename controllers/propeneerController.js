@@ -4,6 +4,7 @@ const Transaction = require("../models/Transaction");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/email");
+const crypto = require("crypto");
 
 // Register Propeneer
 exports.registerPropeneer = async (req, res) => {
@@ -36,7 +37,7 @@ exports.registerPropeneer = async (req, res) => {
          <h2>Welcome to Global Online Banking</h2>
          <p>Thank you for registering as a Propeneer!</p>
          <p>Your account has been successfully created. Please use the password you chose during registration to log in.</p>
-         <p>Best regards,<br/>The Global Online Banking Team</p>
+         <p>Best regards,<br/>The Western Intercontinental Bank Team</p>
        </div>
          `;
 
@@ -121,13 +122,12 @@ exports.getPropeneer = async (req, res) => {
   }
 };
 
-
 // ADMIN ROUTES - For managing users and transactions
 
 // Get all users (regular users, not Propeneers)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select("-password");
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -145,14 +145,12 @@ exports.updateUser = async (req, res) => {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).select('-password');
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-password");
 
     if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json(updatedUser);
@@ -168,18 +166,15 @@ exports.deleteUser = async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(id);
     if (!deletedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Delete all transactions associated with this user
     await Transaction.deleteMany({
-      $or: [
-        { sender: deletedUser._id },
-        { receiver: deletedUser._id }
-      ]
+      $or: [{ sender: deletedUser._id }, { receiver: deletedUser._id }],
     });
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -189,8 +184,8 @@ exports.deleteUser = async (req, res) => {
 exports.getAllTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find()
-      .populate('sender', 'username email')
-      .populate('receiver', 'username email')
+      .populate("sender", "username email")
+      .populate("receiver", "username email")
       .sort({ date: -1 }); // Newest first
 
     res.status(200).json(transactions);
@@ -209,14 +204,40 @@ exports.updateTransactionStatus = async (req, res) => {
       id,
       { status },
       { new: true }
-    ).populate('sender receiver', 'username email');
+    ).populate("sender receiver", "username email");
 
     if (!updatedTransaction) {
-      return res.status(404).json({ message: 'Transaction not found' });
+      return res.status(404).json({ message: "Transaction not found" });
     }
 
     res.status(200).json(updatedTransaction);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Reset password (for authenticated propeneer)
+exports.resetPassword = async (req, res) => {
+  const { newPassword } = req.body;
+  const propeneerId = req.user.id;
+
+  try {
+    // Find the propeneer
+    const propeneer = await Propeneer.findById(propeneerId);
+    if (!propeneer) {
+      return res.status(404).json({ message: "Propeneer not found" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    propeneer.password = hashedPassword;
+    await propeneer.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Password reset error:", err);
+    res.status(500).json({ error: "Failed to reset password" });
   }
 };
