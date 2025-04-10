@@ -86,7 +86,7 @@ const userRoutes = require('./routes/userRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const chatRoutes = require('./routes/chatRoutes'); 
 
-app.use('/admin', propeneerRoutes);
+app.use('/propeneer', propeneerRoutes);
 app.use('/payment', paymentRoute);
 app.use('/user', userRoutes);
 app.use('/transactions', transactionRoutes);
