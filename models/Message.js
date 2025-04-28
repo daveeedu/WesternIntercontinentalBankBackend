@@ -1,48 +1,50 @@
-const mongoose = require('mongoose');
+// models/Message.js
+const mongoose = require("mongoose");
 
 const MessageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    refPath: 'senderModel'
+    required: false, // Not required for anonymous messages
+    refPath: "senderModel",
   },
   senderModel: {
     type: String,
-    required: true,
-    enum: ['User', 'Propeneer']
+    required: function () {
+      return !!this.sender; // Only required if sender exists
+    },
+    enum: ["User", "Propeneer"],
+  },
+  sessionId: {
+    type: String,
+    required: function () {
+      return !this.sender; // Required for anonymous messages
+    },
+    index: true,
   },
   receiver: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: function() {
-      // Only require receiver if sender is Propeneer
-      return this.senderModel === 'Propeneer';
-    },
-    refPath: 'receiverModel'
-  },
-  receiverModel: {
-    type: String,
-    required: function() {
-      // Only require receiverModel if receiver is set
-      return !!this.receiver;
-    },
-    enum: ['User', 'Propeneer']
+    type: mongoose.Schema.Types.Mixed,
+    required: false,
   },
   content: {
     type: String,
-    required: true
+    required: true,
   },
   timestamp: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   read: {
     type: Boolean,
-    default: false
+    default: false,
   },
   threadId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true
-  }
+    type: mongoose.Schema.Types.Mixed,
+    required: true,
+  },
+  isSupport: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-module.exports = mongoose.model('Message', MessageSchema);
+module.exports = mongoose.model("Message", MessageSchema);

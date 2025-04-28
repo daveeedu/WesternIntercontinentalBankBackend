@@ -221,36 +221,83 @@ exports.sendUserMessage = async (req, res) => {
   }
 };
 
-
 // Propeneer replies to a thread
 exports.sendPropeneerReply = async (req, res) => {
-    try {
-      const { threadId } = req.params;
-      const { content } = req.body;
-      const propeneerId = req.user.id; 
-  
-      // Find any message in the thread to get the user
-      const threadMessage = await Message.findOne({ threadId });
-      if (!threadMessage) {
-        return res.status(404).json({ error: 'Thread not found' });
-      }
-      
-      const message = new Message({
-        sender: propeneerId,
-        senderModel: 'Propeneer',
-        receiver: threadMessage.sender, // Original message sender (user)
-        receiverModel: 'User',
-        content,
-        threadId
-      });
-      
-      await message.save();
-      
-      res.status(201).json(message);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+  try {
+    const { threadId } = req.params;
+    const { content } = req.body;
+    const propeneerId = req.user.id;
+
+    // Find any message in the thread to get the user
+    const threadMessage = await Message.findOne({ threadId });
+    if (!threadMessage) {
+      return res.status(404).json({ error: "Thread not found" });
     }
-  };
+
+    const message = new Message({
+      sender: propeneerId,
+      senderModel: "Propeneer",
+      receiver: threadMessage.sender, // Original message sender (user)
+      receiverModel: "User",
+      content,
+      threadId,
+    });
+
+    await message.save();
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getAnonymousThreads = async (req, res) => {
+  try {
+    // Get all unique anonymous sessions with messages
+    const sessions = await Message.aggregate([
+      { $match: { sessionId: { $exists: true } } },
+      { $group: { _id: "$sessionId", lastMessage: { $last: "$$ROOT" } } },
+      { $sort: { "lastMessage.timestamp": -1 } },
+    ]);
+
+    res.json(
+      sessions.map((s) => ({
+        _id: s._id,
+        sessionId: s._id,
+        lastMessage: s.lastMessage,
+        isAnonymous: true,
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching anonymous threads" });
+  }
+};
+
+exports.sendPropeneerReplyToAnonymous = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { content } = req.body;
+
+    const message = new Message({
+      sender: req.propeneer._id,
+      senderModel: "Propeneer",
+      sessionId,
+      content,
+      timestamp: new Date(),
+    });
+
+    await message.save();
+
+    // Emit via socket
+    if (req.app.get("socketio")) {
+      req.app.get("socketio").to(sessionId).emit("receiveMessage", message);
+    }
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: "Error sending reply" });
+  }
+};
 
 // Mark messages as read
 exports.markAsRead = async (req, res) => {
