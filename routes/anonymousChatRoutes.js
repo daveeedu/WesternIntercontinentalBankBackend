@@ -47,7 +47,7 @@ router.post(
         timestamp: new Date(),
         isSupport: false,
         threadId: req.session.anonId, // Use sessionId as threadId for anonymous chats
-        receiver: "propeneers" // Generic receiver for support team
+        receiver: "propeneer" // Generic receiver for support team
       });
 
       await newMessage.save();
