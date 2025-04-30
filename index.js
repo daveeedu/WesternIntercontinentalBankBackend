@@ -144,24 +144,48 @@ io.on("connection", (socket) => {
           senderRef = senderId;
         }
 
+        // Set isSupport flag - true for propeneer messages
+        const isSupport =
+          senderType === "Propeneer" ||
+          socket.handshake.auth.role === "propeneer";
+
         // Create and save message
         const newMessage = new Message({
           sender: senderRef,
           senderModel: senderType,
           sessionId: sessionId,
-          receiver: receiverId || "propeneers",
+          receiver: receiverId || "propeneer",
           content: cleanContent,
           timestamp: new Date(),
           threadId: sessionId || senderId,
-          isSupport: senderType === "Propeneer",
+          isSupport: isSupport,
         });
 
         await newMessage.save();
 
-        // Determine rooms
-        const targetRoom =
-          receiverId || (senderId ? `user_${senderId}` : `anon_${sessionId}`);
-        const senderRoom = senderId ? `user_${senderId}` : `anon_${sessionId}`;
+        // Determine rooms for emission
+        let targetRoom;
+
+        // Handle anonymous chat rooms specially
+        if (receiverId && receiverId.startsWith("anon_")) {
+          // If it's a direct reference to an anonymous room
+          targetRoom = receiverId;
+        } else if (sessionId) {
+          // Anonymous user's room
+          targetRoom = `anon_${sessionId}`;
+        } else if (receiverId) {
+          // Regular user's room
+          targetRoom = `user_${receiverId}`;
+        } else {
+          // Default room for support team
+          targetRoom = "propeneers";
+        }
+
+        const senderRoom = senderId
+          ? `user_${senderId}`
+          : sessionId
+          ? `anon_${sessionId}`
+          : "propeneers";
 
         // Emit to recipient(s)
         io.to(targetRoom).emit("receiveMessage", newMessage);

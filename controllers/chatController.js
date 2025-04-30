@@ -273,29 +273,39 @@ exports.getAnonymousThreads = async (req, res) => {
   }
 };
 
+// Updated sendPropeneerReplyToAnonymous function
 exports.sendPropeneerReplyToAnonymous = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { content } = req.body;
+    const propeneerId = req.user.id;
 
+    // Create a message
     const message = new Message({
-      sender: req.propeneer._id,
+      sender: propeneerId,
       senderModel: "Propeneer",
-      sessionId,
+      sessionId: sessionId,
       content,
+      threadId: sessionId, // Use sessionId as thread identifier
       timestamp: new Date(),
+      isSupport: true, // Mark as support message
+      receiver: sessionId // Set receiver as sessionId
     });
 
     await message.save();
 
-    // Emit via socket
-    if (req.app.get("socketio")) {
-      req.app.get("socketio").to(sessionId).emit("receiveMessage", message);
+    // Get socketio from app
+    const io = req.app.get("socketio");
+    
+    // Emit to the anonymous user's room
+    if (io) {
+      io.to(`anon_${sessionId}`).emit("receiveMessage", message);
     }
 
     res.status(201).json(message);
   } catch (error) {
-    res.status(500).json({ message: "Error sending reply" });
+    console.error("Error sending reply to anonymous user:", error);
+    res.status(500).json({ message: "Error sending reply", error: error.message });
   }
 };
 

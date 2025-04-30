@@ -1,3 +1,4 @@
+// routes/chatRoutes.js
 const express = require("express");
 const router = express.Router();
 const chatController = require("../controllers/chatController");
@@ -30,10 +31,22 @@ router.get(
   authenticate,
   chatController.getPropeneerThreads
 );
+router.get(
+  "/anonymous/threads",
+  authenticate,
+  chatController.getAnonymousThreads
+);
 router.post(
   "/propeneer/reply/:threadId",
   authenticate,
   chatController.sendPropeneerReply
+);
+
+// New route for anonymous replies
+router.post(
+  "/propeneer/reply/anonymous/:sessionId",
+  authenticate,
+  chatController.sendPropeneerReplyToAnonymous
 );
 
 module.exports = router;
